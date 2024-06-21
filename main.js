@@ -38,7 +38,7 @@ const Record = mongoose.model(
           year: date.getFullYear(),
         });
         if (record) {
-          const volatility = get_volatility(record, new_records[origin]);
+          const volatility = get_volatility(record, new_record);
           await Record.updateOne(
             { _id: record._id },
             {
@@ -56,10 +56,10 @@ const Record = mongoose.model(
           await Record.create({
             origin,
             year: date.getFullYear(),
-            a: [...buffer, new_records[origin][0]],
-            b: [...buffer, new_records[origin][1]],
-            c: [...buffer, new_records[origin][2]],
-            d: [...buffer, new_records[origin][3]],
+            a: [...buffer, new_record[0]],
+            b: [...buffer, new_record[1]],
+            c: [...buffer, new_record[2]],
+            d: [...buffer, new_record[3]],
             volatility: 0,
           });
         }
