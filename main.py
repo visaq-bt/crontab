@@ -15,7 +15,7 @@ url = "https://travel.state.gov/content/travel/en/us-visas/visa-information-reso
 raw_website = requests.get(url)
 website = BeautifulSoup(raw_website.content, "html.parser")
 
-date = datetime.today().strftime("%Y-%m-%d")
+date = sys.argv[1]
 # last_updated = website.find("p", text=re.compile("Last updated: ")).contents[0]
 
 data = {}

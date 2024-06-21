@@ -8,30 +8,62 @@ const fs = require("fs");
 
 const Record = mongoose.model(
   "Record",
-  new mongoose.Schema({ origin: String, year: Number, values: Object })
+  new mongoose.Schema({
+    origin: String,
+    year: Number,
+    a: [Number],
+    b: [Number],
+    c: [Number],
+    d: [Number],
+    volatility: Number,
+  })
 );
 
 (async () => {
   try {
     await mongoose.connect(process.env.MONGO);
 
-    const date = get_date();
+    const date_str = process.argv[2];
+    const date = new Date(date_str);
+
     const new_records = JSON.parse(
-      fs.readFileSync(`data/${date.string}.json`, "utf8")
+      fs.readFileSync(`data/${date_str}.json`, "utf8")
     );
-
     for (origin in new_records) {
-      const result = await Record.updateOne(
-        { origin, year: date.year },
-        { [`values.${date.month}-${date.day}`]: new_records[origin] }
-      );
+      const new_record = new_records[origin];
 
-      if (!result.matchedCount)
-        await Record.create({
+      try {
+        const record = await Record.findOne({
           origin,
-          year: date.year,
-          values: { [`${date.month}-${date.day}`]: new_records[origin] },
+          year: date.getFullYear(),
         });
+        if (record) {
+          const volatility = get_volatility(record, new_records[origin]);
+          await Record.updateOne(
+            { _id: record._id },
+            {
+              $push: {
+                a: new_record[0],
+                b: new_record[1],
+                c: new_record[2],
+                d: new_record[3],
+              },
+              $inc: { volatility },
+            }
+          );
+        } else {
+          const buffer = create_buffer(date);
+          await Record.create({
+            origin,
+            year: date.getFullYear(),
+            a: [...buffer, new_records[origin][0]],
+            b: [...buffer, new_records[origin][1]],
+            c: [...buffer, new_records[origin][2]],
+            d: [...buffer, new_records[origin][3]],
+            volatility: 0,
+          });
+        }
+      } catch (error) {}
     }
   } catch (error) {
     mongoose.connection.close();
@@ -41,13 +73,28 @@ const Record = mongoose.model(
   mongoose.connection.close();
 })();
 
-const get_date = () => {
-  const date = new Date();
+const create_buffer = (date) => {
+  const start = new Date(date.getFullYear(), 0, 1);
+  const buffer_len = Math.ceil((date - start) / 86400000) - 1;
 
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const string = `${year}-${month.toString().padStart(2, "0")}-${day}`;
+  let buffer = [];
+  for (var i = 0; i < buffer_len; i++) {
+    buffer.push(-1);
+  }
 
-  return { year, month, day, string };
+  return buffer;
+};
+
+const get_volatility = (record, new_record) => {
+  const abcd = "abcd";
+
+  let sum = 0;
+  for (let i = 0; i < abcd.length; i++) {
+    const n1 = record[abcd[i]][record[abcd[i]].length - 1];
+    const n2 = new_record[i];
+    if (n1 * n2 < 0) sum += 1000;
+    sum += Math.abs(n1 - n2);
+  }
+
+  return sum;
 };
