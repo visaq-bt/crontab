@@ -65,6 +65,28 @@ const Record = mongoose.model(
         }
       } catch (error) {}
     }
+
+    // health check
+    const num_days = get_num_days();
+    const records = await Record.find().select({
+      origin: 1,
+      a: 1,
+      b: 1,
+      c: 1,
+      d: 1,
+    });
+
+    for (const record of records) {
+      let set = {};
+      for (const x of "abcd") {
+        const diff = num_days - record[x].length;
+        if (diff <= 0) continue;
+        set[x] = [...record[x], ...new Array(diff).fill(-1)];
+      }
+      if (Object.keys(set).length === 0) continue;
+      const result = await Record.updateOne({ _id: record._id }, { $set: set });
+      console.log(record.origin, result);
+    }
   } catch (error) {
     mongoose.connection.close();
     process.exit(100);
@@ -97,4 +119,10 @@ const get_volatility = (record, new_record) => {
   }
 
   return sum;
+};
+
+const get_num_days = function () {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), 0, 1);
+  return Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1;
 };
