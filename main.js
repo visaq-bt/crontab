@@ -85,7 +85,6 @@ const Record = mongoose.model(
       }
       if (Object.keys(set).length === 0) continue;
       const result = await Record.updateOne({ _id: record._id }, { $set: set });
-      console.log(record.origin, result);
     }
   } catch (error) {
     mongoose.connection.close();
